@@ -1,12 +1,19 @@
 const express = require("express");
 require("./db/mongoose");
+const cors = require("cors");
+
+const productRouter = require("./routers/productRouter");
 
 const app = express();
 app.use(express.json()); // automatic convert json into object
 
+app.use(cors()); // Enable CORS
+
+app.use("/products", express.static("products"));
+
 const port = process.env.PORT || 8080;
 
-app.get("/login", (req, res) => res.send({ message: "Hey" }));
+app.use(productRouter);
 
 app.listen(port, () => {
   console.log("Server started on " + port);
