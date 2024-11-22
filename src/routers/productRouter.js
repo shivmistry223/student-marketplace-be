@@ -2,6 +2,8 @@ const express = require("express");
 const Product = require("../model/product");
 const upload = require("../utils/uploadFile");
 const router = new express.Router();
+const fs = require("fs");
+const path = require("path");
 
 router.post("/product", upload.single("productImage"), async (req, res) => {
   console.log(req.body);
@@ -123,6 +125,14 @@ router.delete("/product/:id", async (req, res) => {
     if (!product) {
       return res.status(404).send();
     }
+
+    const imagePath = path.join(__dirname, "../..", product.productimageUrl); // Adjust path to match your directory structure
+
+    fs.unlink(imagePath, (err) => {
+      if (err) {
+        console.error("Error deleting file:", err);
+      }
+    });
 
     res.send(product);
   } catch (e) {
