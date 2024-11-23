@@ -26,7 +26,18 @@ const productSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
+  productOwner: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: "User",
+  },
 });
+
+// productSchema.virtual("user", {
+//   ref: "User",
+//   localField: "productOwner",
+//   foreignField: "_id",
+// });
 
 const Product = mongoose.model("Product", productSchema);
 module.exports = Product;

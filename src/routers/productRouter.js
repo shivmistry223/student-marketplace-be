@@ -4,20 +4,19 @@ const upload = require("../utils/uploadFile");
 const router = new express.Router();
 const fs = require("fs");
 const path = require("path");
+const User = require("../model/user");
 
 router.post("/product", upload.single("productImage"), async (req, res) => {
   console.log(req.body);
   const product = new Product(req.body);
-  //   const task = new Task({
-  //     ...req.body,
-  //     owner: req.user._id,
-  //   });
+
   if (!req.file) {
     return res.status(400).json({ error: "Product image is required." });
   }
 
   product.productimageUrl = `/products/${req.file.filename}`;
   try {
+    console.log(product, "last step");
     await product.save();
     res.send(product);
   } catch (err) {
@@ -27,10 +26,10 @@ router.post("/product", upload.single("productImage"), async (req, res) => {
 
 router.get("/product/:id", async (req, res) => {
   const _id = req.params.id;
-
   try {
-    // const task = await Task.findOne({ _id, owner: req.user._id });
-    const product = await Product.findOne({ _id });
+    const product = await Product.findOne({ _id })
+      .populate("productOwner")
+      .exec();
     if (!product) {
       return res.status(404).send();
     }
@@ -42,29 +41,19 @@ router.get("/product/:id", async (req, res) => {
 
 router.get("/products", async (req, res) => {
   try {
-    const products = await Product.find({});
-    // await req.user.populate("tasks");
-    // const match = {};
-    // const sort = {};
+    const { category, ownerId } = req.query;
+    let query = {};
+    if (category !== "all") {
+      query = { productCatagory: category };
+    }
 
-    // if (req.query.completed) {
-    //   match.completed = req.query.completed === "true";
-    // }
+    if (ownerId) {
+      console.log(ownerId);
+      query = { productOwner: ownerId };
+    }
 
-    // if (req.query.sortBy) {
-    //   const parts = req.query.sortBy.split("_");
-    //   sort[parts[0]] = parts[1] === "desc" ? -1 : 1;
-    // }
-
-    // await req.user.populate({
-    //   path: "tasks",
-    //   match,
-    //   options: {
-    //     limit: parseInt(req.query.limit),
-    //     skip: parseInt(req.query.skip),
-    //     sort,
-    //   },
-    // });
+    const products = await Product.find(query).populate("productOwner").exec();
+    console.log(products);
     res.send(products);
   } catch (error) {
     res.status(500).send(error.message);
@@ -74,25 +63,7 @@ router.get("/products", async (req, res) => {
 router.patch("/product/:id", async (req, res) => {
   console.log(req.body, "HELloo");
 
-  //   const allowableUpdates = ["description", "completed"];
-  //   const updates = Object.keys(req.body);
-  //   const isValidUpdates = updates.every((update) =>
-  //     allowableUpdates.includes(update)
-  //   );
-
-  //   if (!isValidUpdates || !req.body) {
-  //     return res.status(400).send({ error: "Invalid Updates" });
-  //   }
-
   try {
-    // const product = await Product.findOneAndUpdate(
-    //   { _id: req.params.id, owner: req.user._id },
-    //   req.body,
-    //   {
-    //     new: true,
-    //     runValidators: true,
-    //   }
-    // );
     const product = await Product.findOneAndUpdate(
       { _id: req.params.id },
       req.body,
@@ -114,10 +85,6 @@ router.patch("/product/:id", async (req, res) => {
 
 router.delete("/product/:id", async (req, res) => {
   try {
-    // const product = await Product.findOneAndDelete({
-    //   _id: req.params.id,
-    //   owner: req.user._id,
-    // });
     const product = await Product.findOneAndDelete({
       _id: req.params.id,
     });
