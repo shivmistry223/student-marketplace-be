@@ -107,4 +107,50 @@ router.delete("/product/:id", async (req, res) => {
   }
 });
 
+router.get("/products/search", async (req, res) => {
+  const { category,name } = req.query;
+  console.log(category, name);
+  try {
+    let product = [];
+    if (!name) 
+      {
+        if(category == "all")
+        {
+          products = await Product.find();
+          return res.status(200).send(products);
+        }
+        else{
+        products = await Product.find({
+          productCatagory: category
+        });
+        } 
+      }
+    else
+    {
+        if(category != "all")
+        {
+          products = await Product.find({
+          productCatagory: category, 
+          productName: { $regex: name, $options: "i" },
+        });
+        }
+        else{
+          products = await Product.find({
+              productName: { $regex: name, $options: "i" }, 
+            });
+        }
+    }
+    
+
+    // if (products.length === 0) {
+    //   return res.status(404).send("No products found matching your search.");
+    // }
+
+    res.status(200).json(products);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
 module.exports = router;
