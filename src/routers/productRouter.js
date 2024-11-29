@@ -7,7 +7,6 @@ const path = require("path");
 const User = require("../model/user");
 
 router.post("/product", upload.single("productImage"), async (req, res) => {
-  console.log(req.body);
   const product = new Product(req.body);
 
   if (!req.file) {
@@ -16,7 +15,6 @@ router.post("/product", upload.single("productImage"), async (req, res) => {
 
   product.productimageUrl = `/products/${req.file.filename}`;
   try {
-    console.log(product, "last step");
     await product.save();
     res.send(product);
   } catch (err) {
@@ -48,12 +46,10 @@ router.get("/products", async (req, res) => {
     }
 
     if (ownerId) {
-      console.log(ownerId);
       query = { productOwner: ownerId };
     }
 
     const products = await Product.find(query).populate("productOwner").exec();
-    console.log(products);
     res.send(products);
   } catch (error) {
     res.status(500).send(error.message);
@@ -61,8 +57,6 @@ router.get("/products", async (req, res) => {
 });
 
 router.patch("/product/:id", async (req, res) => {
-  console.log(req.body, "HELloo");
-
   try {
     const product = await Product.findOneAndUpdate(
       { _id: req.params.id },
@@ -108,47 +102,39 @@ router.delete("/product/:id", async (req, res) => {
 });
 
 router.get("/products/search", async (req, res) => {
-  const { category,name } = req.query;
-  console.log(category, name);
+  const { category, name } = req.query;
   try {
     let product = [];
-    if (!name) 
-      {
-        if(category == "all")
-        {
-          products = await Product.find();
-          return res.status(200).send(products);
-        }
-        else{
+    if (!name) {
+      if (category == "all") {
+        products = await Product.find().populate("productOwner").exec();
+        return res.status(200).send(products);
+      } else {
         products = await Product.find({
-          productCatagory: category
-        });
-        } 
+          productCatagory: category,
+        })
+          .populate("productOwner")
+          .exec();
       }
-    else
-    {
-        if(category != "all")
-        {
-          products = await Product.find({
-          productCatagory: category, 
+    } else {
+      if (category != "all") {
+        products = await Product.find({
+          productCatagory: category,
           productName: { $regex: name, $options: "i" },
-        });
-        }
-        else{
-          products = await Product.find({
-              productName: { $regex: name, $options: "i" }, 
-            });
-        }
+        })
+          .populate("productOwner")
+          .exec();
+      } else {
+        products = await Product.find({
+          productName: { $regex: name, $options: "i" },
+        })
+          .populate("productOwner")
+          .exec();
+      }
     }
-    
-
-    // if (products.length === 0) {
-    //   return res.status(404).send("No products found matching your search.");
-    // }
 
     res.status(200).json(products);
   } catch (error) {
-    console.error(error);
     res.status(500).json({ error: "Internal server error." });
   }
 });

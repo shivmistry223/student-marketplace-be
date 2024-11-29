@@ -4,6 +4,7 @@ const User = require("../model/user");
 const multer = require("multer");
 const sharp = require("sharp");
 const router = new express.Router();
+const bcrypt = require("bcrypt");
 
 router.post("/register", async (req, res) => {
   const user = new User(req.body);
@@ -61,32 +62,35 @@ router.put("/user", async (req, res) => {
     await user.save();
     res.send(user);
   } catch (error) {
-    console.log(error);
     res.status(400).send({ error: error.message });
   }
 });
 
 router.post("/reset-password", async (req, res) => {
-  const { id, newPassword, confirmPassword } = req.body;
+  const { id, oldPassword, newPassword, confirmPassword } = req.body;
 
   if (newPassword !== confirmPassword) {
-    return res.status(400).send({ error: "Passwords do not match!" });
+    return res.status(400).send("Passwords do not match!");
   }
 
   try {
     const user = await User.findById(id);
     if (!user) {
-      return res.status(404).send({ error: "User not found!" });
+      return res.status(404).send("User not found!");
     }
 
-    // Hash the new password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedPassword;
+    const isValid = await bcrypt.compare(oldPassword, user.password);
+
+    if (!isValid) {
+      throw new Error("Invalid Password");
+    }
+
+    user.password = newPassword;
 
     await user.save();
-    res.send({ message: "Password reset successful!" });
+    res.send("Password reset successful!");
   } catch (err) {
-    res.status(500).send({ error: "Internal Server Error" });
+    res.status(500).send(err.message);
   }
 });
 module.exports = router;
