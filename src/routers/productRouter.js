@@ -37,22 +37,66 @@ router.get("/product/:id", async (req, res) => {
   }
 });
 
+// router.get("/products", async (req, res) => {
+//   try {
+//     const { category, ownerId } = req.query;
+//     let query = {};
+//     if (category !== "all") {
+//       query = { productCatagory: category };
+//     }
+
+//     if (ownerId) {
+//       query = { productOwner: ownerId };
+//     }
+
+//     const products = await Product.find(query)
+//       .populate("productOwner")
+//       .skip(2)
+//       .limit(4)
+//       .exec();
+
+//     console.log(products);
+//     res.send(products);
+//   } catch (error) {
+//     res.status(500).send(error.message);
+//   }
+// });
+
 router.get("/products", async (req, res) => {
   try {
-    const { category, ownerId } = req.query;
+    const { category, ownerId, page = 1, limit = 10 } = req.query;
+
     let query = {};
-    if (category !== "all") {
-      query = { productCatagory: category };
+
+    if (category && category !== "all") {
+      query.productCatagory = category;
     }
 
     if (ownerId) {
-      query = { productOwner: ownerId };
+      query.productOwner = ownerId;
     }
 
-    const products = await Product.find(query).populate("productOwner").exec();
-    res.send(products);
+    // Parse `page` and `limit` to integers
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+
+    const products = await Product.find(query)
+      .populate("productOwner")
+      .skip((pageNumber - 1) * limitNumber) // Skip documents for the current page
+      .limit(limitNumber) // Limit the number of documents
+      .exec();
+
+    // Get the total count for the query
+    const totalCount = await Product.countDocuments(query);
+
+    res.send({
+      products,
+      totalPages: Math.ceil(totalCount / limitNumber),
+      currentPage: pageNumber,
+      totalCount,
+    });
   } catch (error) {
-    res.status(500).send(error.message);
+    res.status(500).send({ error: error.message });
   }
 });
 
