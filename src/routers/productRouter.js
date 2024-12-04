@@ -37,34 +37,11 @@ router.get("/product/:id", async (req, res) => {
   }
 });
 
-// router.get("/products", async (req, res) => {
-//   try {
-//     const { category, ownerId } = req.query;
-//     let query = {};
-//     if (category !== "all") {
-//       query = { productCatagory: category };
-//     }
-
-//     if (ownerId) {
-//       query = { productOwner: ownerId };
-//     }
-
-//     const products = await Product.find(query)
-//       .populate("productOwner")
-//       .skip(2)
-//       .limit(4)
-//       .exec();
-
-//     console.log(products);
-//     res.send(products);
-//   } catch (error) {
-//     res.status(500).send(error.message);
-//   }
-// });
 
 router.get("/products", async (req, res) => {
   try {
     const { category, ownerId, page = 1, limit = 10 } = req.query;
+    console.log(req.query);
 
     let query = {};
 
@@ -88,7 +65,7 @@ router.get("/products", async (req, res) => {
 
     // Get the total count for the query
     const totalCount = await Product.countDocuments(query);
-
+    console.log(products.length, pageNumber, totalCount, Math.ceil(totalCount / limitNumber));
     res.send({
       products,
       totalPages: Math.ceil(totalCount / limitNumber),
@@ -146,39 +123,37 @@ router.delete("/product/:id", async (req, res) => {
 });
 
 router.get("/products/search", async (req, res) => {
-  const { category, name } = req.query;
+  const { category, name,page, limit = 10 } = req.query;
+  let pageNumber = parseInt(page, 10);
+  const limitNumber = parseInt(limit, 10);
   try {
-    let product = [];
-    if (!name) {
-      if (category == "all") {
-        products = await Product.find().populate("productOwner").exec();
-        return res.status(200).send(products);
-      } else {
-        products = await Product.find({
-          productCatagory: category,
-        })
-          .populate("productOwner")
-          .exec();
-      }
-    } else {
-      if (category != "all") {
-        products = await Product.find({
-          productCatagory: category,
-          productName: { $regex: name, $options: "i" },
-        })
-          .populate("productOwner")
-          .exec();
-      } else {
-        products = await Product.find({
-          productName: { $regex: name, $options: "i" },
-        })
-          .populate("productOwner")
-          .exec();
-      }
-    }
+    let products = [];
+    const query = {};
 
-    res.status(200).json(products);
+    if (category && category !== "all") {
+      query.productCatagory = category;
+    }
+    if (name) {
+      query.productName = { $regex: name, $options: "i" };
+    }
+    const totalCount = await Product.countDocuments(query);
+    const totalPage = Math.ceil(totalCount / limitNumber);
+    if (pageNumber > totalPage) {
+      pageNumber = 1;
+    }
+    products = await Product.find(query)
+      .skip((pageNumber - 1) * limitNumber) 
+      .limit(limitNumber) 
+      .populate("productOwner")
+      .exec();
+    res.send({
+      products,
+      totalPages: totalPage,
+      currentPage: pageNumber,
+      totalCount,
+    });
   } catch (error) {
+    console.log(error);
     res.status(500).json({ error: "Internal server error." });
   }
 });
